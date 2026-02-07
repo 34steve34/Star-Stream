@@ -49,6 +49,7 @@
         - <b>STRICT ISOLATION:</b> Rotation cannot affect drift velocity.<br>
         - <b>SPEED CAP:</b> Ship top speed is electronically limited.<br>
         - <b>SCORE LOCK:</b> Score frozen during combat phases.<br>
+        - <b>CONTROLS:</b> Upper-left = CW, Lower-left = CCW rotation.<br>
         - <b>DOOM:</b> Slow-flow singularity (2s).
     </div>
     <button id="startBtn">INITIATE TRIAL</button>
@@ -75,6 +76,7 @@ let bullets = [], stars = [];
 let threat = { active: false, angle: 0, hits: 0, startTime: 0, flicker: 0, lastTrigger: 0, doomScale: 0, dying: false };
 let ship = { x: 0, y: 0, vx: 0, vy: 0, angle: -Math.PI/2, vAngle: 0 };
 let leadPoint = { x: 0, y: 0 };
+let shipImage = null; // Optional: set to Image object to use custom ship sprite
 
 const CONFIG = {
     rotTorque: 0.0055, // Snappy rotation
@@ -96,11 +98,19 @@ window.addEventListener("touchstart", (e) => {
     if (!gameRunning) return;
     for(let t of e.touches) {
         if (t.clientX < canvas.width/2) {
+            // Left side of screen - check upper vs lower half
+            if (t.clientY < canvas.height/2) {
+                // Upper-left = Clockwise
+                rotDir = 1;
+            } else {
+                // Lower-left = Counter-clockwise
+                rotDir = -1;
+            }
             touchL = true;
-            let now = Date.now();
-            if (now - lastLTap < 300) rotDir *= -1;
-            lastLTap = now;
-        } else { fireBullet(); }
+        } else { 
+            // Right side = Fire
+            fireBullet(); 
+        }
     }
     e.preventDefault();
 }, {passive: false});
@@ -309,9 +319,19 @@ function draw() {
     ctx.save(); 
     ctx.translate(ship.x, ship.y); 
     ctx.rotate(ship.angle);
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath();
-    ctx.moveTo(25, 0); ctx.lineTo(-15, -30); ctx.lineTo(-8, 0); ctx.lineTo(-15, 30);
-    ctx.closePath(); ctx.stroke(); 
+    
+    if (shipImage && shipImage.complete) {
+        // Draw PNG image if loaded (centered on ship position)
+        let w = shipImage.width || 60;
+        let h = shipImage.height || 60;
+        ctx.drawImage(shipImage, -w/2, -h/2, w, h);
+    } else {
+        // Default vector ship
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath();
+        ctx.moveTo(25, 0); ctx.lineTo(-15, -30); ctx.lineTo(-8, 0); ctx.lineTo(-15, 30);
+        ctx.closePath(); ctx.stroke();
+    }
+    
     ctx.restore();
 }
 
@@ -322,6 +342,14 @@ startBtn.addEventListener("click", async () => {
     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         try { await DeviceMotionEvent.requestPermission(); } catch(e) {}
     }
+    
+    // OPTIONAL: Uncomment these lines to use a custom ship PNG
+    // Make sure to upload your ship image file to the same directory
+    /*
+    shipImage = new Image();
+    shipImage.src = './ship.png'; // Replace with your ship image filename
+    */
+    
     startLevel(1);
 });
 
