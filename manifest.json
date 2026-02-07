@@ -1,0 +1,24 @@
+{
+  "name": "STAR STREAM",
+  "short_name": "STARSTREAM",
+  "description": "Virtual Stress Test v44.8 - Mobile Space Combat Game",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#00E676",
+  "icons": [
+    {
+      "src": "STARSTREAM-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "STARSTREAM0512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
