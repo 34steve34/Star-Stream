@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./STARSTREAM-192.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="./STARSTREAM-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="./STARSTREAM0512.png" />
-<title>STAR STREAM v44.8</title>
+<title>STAR STREAM v44.8.2</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; overflow: hidden; touch-action: none; font-family: 'Courier New', monospace; color: #00E676; }
@@ -37,14 +37,14 @@
 <body>
 <canvas id="gameCanvas"></canvas>
 <div id="ui">
-    STAR STREAM | LVL: <span id="lvlDisp">1</span><br>
+    STAR STREAM v44.8.2 | LVL: <span id="lvlDisp">1</span><br>
     TIME: <span id="timer">30.00</span>s | SCORE: <span id="scoreDisp">200</span>
 </div>
 
 <div id="deathScreen">HULL BREACHED<br>STABILIZING...</div>
 
 <div id="overlay">
-    <h1 style="margin-bottom: 10px; font-size: 16px;">VIRTUAL STRESS TEST v44.8</h1>
+    <h1 style="margin-bottom: 10px; font-size: 16px;">VIRTUAL STRESS TEST v44.8.2</h1>
     <div class="briefing">
         - <b>STRICT ISOLATION:</b> Rotation cannot affect drift velocity.<br>
         - <b>SPEED CAP:</b> Ship top speed is electronically limited.<br>
@@ -320,10 +320,12 @@ function draw() {
     ctx.translate(ship.x, ship.y); 
     ctx.rotate(ship.angle);
     
-    if (shipImage && shipImage.complete) {
-        // Draw PNG image if loaded (centered on ship position)
-        let w = shipImage.width || 60;
-        let h = shipImage.height || 60;
+    if (shipImage && shipImage.complete && shipImage.width > 0) {
+        // Draw PNG image scaled to reasonable size (max 50px)
+        let maxSize = 50; // Maximum ship dimension
+        let scale = Math.min(maxSize / shipImage.width, maxSize / shipImage.height);
+        let w = shipImage.width * scale;
+        let h = shipImage.height * scale;
         ctx.drawImage(shipImage, -w/2, -h/2, w, h);
     } else {
         // Default vector ship
@@ -345,12 +347,10 @@ startBtn.addEventListener("click", async () => {
     
     // OPTIONAL: Uncomment these lines to use a custom ship PNG
     // Make sure to upload your ship image file to the same directory
-   
+    /*
     shipImage = new Image();
-	shipImage.src = './ship.png';
-	shipImage.onload = () => console.log('✓ Ship image loaded successfully!', shipImage.width, shipImage.height);
-	shipImage.onerror = () => console.log('✗ Ship image FAILED to load - check filename and path');
-   
+    shipImage.src = './ship.png'; // Replace with your ship image filename
+    */
     
     startLevel(1);
 });
