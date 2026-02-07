@@ -1,4 +1,4 @@
-const CACHE_NAME = 'starstream-v4';
+const CACHE_NAME = 'starstream-v5';
 const urlsToCache = [
   './',
   './index.html',

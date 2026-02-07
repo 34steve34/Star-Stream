@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./STARSTREAM-192.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="./STARSTREAM-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="./STARSTREAM0512.png" />
-<title>STAR STREAM v44.8.3</title>
+<title>STAR STREAM v44.9</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; overflow: hidden; touch-action: none; font-family: 'Courier New', monospace; color: #00E676; }
@@ -37,14 +37,14 @@
 <body>
 <canvas id="gameCanvas"></canvas>
 <div id="ui">
-    STAR STREAM v44.8.3 | LVL: <span id="lvlDisp">1</span><br>
+    STAR STREAM v44.9 | LVL: <span id="lvlDisp">1</span><br>
     TIME: <span id="timer">30.00</span>s | SCORE: <span id="scoreDisp">200</span>
 </div>
 
 <div id="deathScreen">HULL BREACHED<br>STABILIZING...</div>
 
 <div id="overlay">
-    <h1 style="margin-bottom: 10px; font-size: 16px;">VIRTUAL STRESS TEST v44.8.3</h1>
+    <h1 style="margin-bottom: 10px; font-size: 16px;">VIRTUAL STRESS TEST v44.9</h1>
     <div class="briefing">
         - <b>STRICT ISOLATION:</b> Rotation cannot affect drift velocity.<br>
         - <b>SPEED CAP:</b> Ship top speed is electronically limited.<br>
@@ -71,6 +71,7 @@ const nextLevelBtn = document.getElementById("nextLevelBtn");
 let gameRunning = false, currentLevel = 1, frameCount = 0;
 let evalSlowdown = 1.0, touchL = false, lastLTap = 0, rotDir = 1;
 let tiltX = 0, tiltY = 0, totalError = 0, startTime = 0;
+let lastFrameTime = 0;
 
 let bullets = [], stars = [];
 let threat = { active: false, angle: 0, hits: 0, startTime: 0, flicker: 0, lastTrigger: 0, doomScale: 0, dying: false };
@@ -126,7 +127,10 @@ window.addEventListener("touchend", (e) => {
 
 window.addEventListener("devicemotion", (e) => {
     const acc = e.accelerationIncludingGravity;
-    if (acc && gameRunning) { tiltX = (acc.y || 0); tiltY = (acc.x || 0) - 6; }
+    if (acc && gameRunning) { 
+        tiltX = (acc.y || 0); 
+        tiltY = (acc.x || 0) - 6; 
+    }
 });
 
 function fireBullet() {
@@ -153,6 +157,14 @@ function triggerThreat() {
 
 function update() {
     if (!gameRunning) return;
+    
+    // Delta-time protection: Cap frame delta to prevent speed-up
+    let currentTime = performance.now();
+    let deltaTime = lastFrameTime > 0 ? (currentTime - lastFrameTime) : 16.67;
+    deltaTime = Math.min(deltaTime, 16.67); // Cap at ~60fps to prevent speed-up
+    let dtMultiplier = deltaTime / 16.67;
+    lastFrameTime = currentTime;
+    
     let now = Date.now();
     let elapsed = now - startTime;
     let remaining = Math.max(0, (CONFIG.trialDuration - elapsed) / 1000);
@@ -198,14 +210,14 @@ function update() {
     document.getElementById("scoreDisp").innerText = score;
 
     // --- ISOLATED ROTATION ---
-    if (touchL) ship.vAngle += CONFIG.rotTorque * rotDir;
-    ship.angle += ship.vAngle; 
-    ship.vAngle *= CONFIG.rotFriction;
+    if (touchL) ship.vAngle += CONFIG.rotTorque * rotDir * dtMultiplier;
+    ship.angle += ship.vAngle * dtMultiplier; 
+    ship.vAngle *= Math.pow(CONFIG.rotFriction, dtMultiplier);
 
     // --- ISOLATED DRIFT ---
     // Zero reference to 'ship.angle' here ensures no velocity leakage.
-    ship.vx += (tiltX * CONFIG.driftSens); 
-    ship.vy += (tiltY * CONFIG.driftSens);
+    ship.vx += (tiltX * CONFIG.driftSens * dtMultiplier); 
+    ship.vy += (tiltY * CONFIG.driftSens * dtMultiplier);
     
     // Velocity Clamp
     let speed = Math.hypot(ship.vx, ship.vy);
@@ -214,17 +226,19 @@ function update() {
         ship.vy = (ship.vy / speed) * CONFIG.maxVelocity;
     }
 
-    ship.x += ship.vx; 
-    ship.y += ship.vy;
-    ship.vx *= CONFIG.driftFriction; 
-    ship.vy *= CONFIG.driftFriction;
+    ship.x += ship.vx * dtMultiplier; 
+    ship.y += ship.vy * dtMultiplier;
+    ship.vx *= Math.pow(CONFIG.driftFriction, dtMultiplier); 
+    ship.vy *= Math.pow(CONFIG.driftFriction, dtMultiplier);
 
     ship.x = Math.max(0, Math.min(canvas.width, ship.x));
     ship.y = Math.max(0, Math.min(canvas.height, ship.y));
 
     // Bullets
     for (let i = bullets.length - 1; i >= 0; i--) {
-        let b = bullets[i]; b.x += b.vx; b.y += b.vy;
+        let b = bullets[i]; 
+        b.x += b.vx * dtMultiplier; 
+        b.y += b.vy * dtMultiplier;
         if (threat.active && !threat.dying) {
             let bAng = Math.atan2(b.y - canvas.height/2, b.x - canvas.width/2);
             let diff = Math.abs(((bAng - threat.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -240,7 +254,7 @@ function update() {
     }
 
     for (let i = stars.length - 1; i >= 0; i--) {
-        let s = stars[i]; s.z -= CONFIG.speedZ * evalSlowdown;
+        let s = stars[i]; s.z -= CONFIG.speedZ * evalSlowdown * dtMultiplier;
         if (s.z <= 0) { stars.splice(i, 1); spawnStar(1.0); }
     }
 }
@@ -272,7 +286,7 @@ function startLevel(lvl) {
     ship.vx = 0; ship.vy = 0; ship.vAngle = 0;
     stars = []; bullets = []; threat.active = false; threat.dying = false; threat.lastTrigger = 0;
     for(let i=0; i<CONFIG.starCount; i++) spawnStar(Math.random());
-    totalError = 0; startTime = Date.now(); gameRunning = true;
+    totalError = 0; startTime = Date.now(); lastFrameTime = 0; gameRunning = true;
 }
 
 function draw() {
