@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STARSTREAM - Installation Check</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #000; 
+            color: #00E676; 
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #fff; border-bottom: 2px solid #00E676; padding-bottom: 10px; }
+        .check-item { 
+            margin: 15px 0; 
+            padding: 10px; 
+            border: 1px solid #333; 
+            border-radius: 4px;
+        }
+        .status { font-weight: bold; margin-left: 10px; }
+        .ok { color: #00E676; }
+        .error { color: #ff5252; }
+        .warning { color: #ffa726; }
+        button {
+            background: #00E676;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        button:hover { background: #00c853; }
+        #results { margin-top: 20px; }
+        code { 
+            background: #1a1a1a; 
+            padding: 2px 6px; 
+            border-radius: 3px;
+            color: #ffa726;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌟 STARSTREAM Installation Checker</h1>
+    
+    <p>This page will verify your offline PWA setup is correct.</p>
+    
+    <button onclick="runChecks()">Run Diagnostic</button>
+    <button onclick="window.location.href='index.html'">Launch Game</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function runChecks() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Running checks...</h2>';
+            
+            let html = '';
+            let allGood = true;
+
+            // Check 1: Service Worker Support
+            html += '<div class="check-item">';
+            html += '1. Service Worker Support: ';
+            if ('serviceWorker' in navigator) {
+                html += '<span class="status ok">✓ Supported</span>';
+            } else {
+                html += '<span class="status error">✗ Not Supported</span>';
+                html += '<p>Your browser doesn\'t support service workers. The game will work but won\'t cache for offline use.</p>';
+                allGood = false;
+            }
+            html += '</div>';
+
+            // Check 2: DeviceMotion API
+            html += '<div class="check-item">';
+            html += '2. Device Motion API: ';
+            if (window.DeviceMotionEvent) {
+                html += '<span class="status ok">✓ Available</span>';
+                if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                    html += '<p>iOS detected - permission will be requested when game starts</p>';
+                }
+            } else {
+                html += '<span class="status warning">⚠ Not Available</span>';
+                html += '<p>Tilt controls won\'t work. You may be on desktop.</p>';
+            }
+            html += '</div>';
+
+            // Check 3: File Presence
+            html += '<div class="check-item">';
+            html += '3. Required Files: ';
+            const files = ['index.html', 'manifest.json', 'sw.js', 'STARSTREAM-192.png', 'STARSTREAM0512.png'];
+            let fileStatus = '<ul>';
+            
+            for (const file of files) {
+                try {
+                    const response = await fetch(file, { method: 'HEAD' });
+                    if (response.ok) {
+                        fileStatus += `<li>${file}: <span class="ok">✓ Found</span></li>`;
+                    } else {
+                        fileStatus += `<li>${file}: <span class="error">✗ Missing (${response.status})</span></li>`;
+                        allGood = false;
+                    }
+                } catch (e) {
+                    fileStatus += `<li>${file}: <span class="error">✗ Error checking</span></li>`;
+                }
+            }
+            fileStatus += '</ul>';
+            html += fileStatus;
+            html += '</div>';
+
+            // Check 4: Manifest Loading
+            html += '<div class="check-item">';
+            html += '4. Manifest File: ';
+            try {
+                const response = await fetch('manifest.json');
+                const manifest = await response.json();
+                html += '<span class="status ok">✓ Valid JSON</span>';
+                html += `<p>App Name: ${manifest.name}<br>Orientation: ${manifest.orientation}</p>`;
+            } catch (e) {
+                html += '<span class="status error">✗ Error loading manifest</span>';
+                html += `<p>Error: ${e.message}</p>`;
+                allGood = false;
+            }
+            html += '</div>';
+
+            // Check 5: Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                html += '<div class="check-item">';
+                html += '5. Service Worker Registration: ';
+                try {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        html += '<span class="status ok">✓ Registered</span>';
+                        html += `<p>Scope: ${registration.scope}<br>State: ${registration.active ? 'Active' : 'Installing'}</p>`;
+                    } else {
+                        html += '<span class="status warning">⚠ Not yet registered</span>';
+                        html += '<p>Service worker will register when you open index.html</p>';
+                    }
+                } catch (e) {
+                    html += '<span class="status error">✗ Registration check failed</span>';
+                }
+                html += '</div>';
+            }
+
+            // Check 6: Screen Orientation
+            html += '<div class="check-item">';
+            html += '6. Screen Orientation: ';
+            const isLandscape = window.innerWidth > window.innerHeight;
+            if (isLandscape) {
+                html += '<span class="status ok">✓ Landscape (Good for gameplay)</span>';
+            } else {
+                html += '<span class="status warning">⚠ Portrait</span>';
+                html += '<p>Please rotate your device to landscape mode for best experience</p>';
+            }
+            html += `<p>Resolution: ${window.innerWidth} × ${window.innerHeight}</p>`;
+            html += '</div>';
+
+            // Final Summary
+            html += '<div class="check-item" style="border: 2px solid ' + (allGood ? '#00E676' : '#ffa726') + ';">';
+            html += '<h3>Summary</h3>';
+            if (allGood) {
+                html += '<p class="ok">✓ All critical checks passed! You can play offline.</p>';
+                html += '<p>To install as an app:</p>';
+                html += '<ul>';
+                html += '<li><strong>Android Chrome:</strong> Menu (⋮) → "Install app"</li>';
+                html += '<li><strong>iOS Safari:</strong> Share → "Add to Home Screen"</li>';
+                html += '</ul>';
+            } else {
+                html += '<p class="warning">⚠ Some issues detected. The game should still work but may have limited functionality.</p>';
+            }
+            html += '</div>';
+
+            results.innerHTML = html;
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(runChecks, 500);
+        });
+    </script>
+</body>
+</html>
