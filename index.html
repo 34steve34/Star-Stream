@@ -191,15 +191,19 @@ function update() {
     if (elapsed >= CONFIG.trialDuration) { evalSlowdown = 0.7; endGame(); return; }
 
     let targetSpeedScale = (threat.active && !threat.dying) ? 0.5 : 1.0;
-    frameCount += (1 * evalSlowdown * targetSpeedScale);
+    
+    // FIX 1: Apply dtMultiplier to frameCount so time passes consistently
+    frameCount += (1 * evalSlowdown * targetSpeedScale) * dtMultiplier;
+    
     let sf = 1 + (currentLevel - 1) * 0.10;
     let t = frameCount * 0.012 * sf;
 
     let dX = (canvas.width/2) + (Math.sin(t*0.8)*0.4)*canvas.width;
     let dY = (canvas.height/2) + (Math.cos(t*0.7)*0.3)*canvas.height;
     
-    leadPoint.x += (dX - leadPoint.x) * (0.07 * evalSlowdown * targetSpeedScale);
-    leadPoint.y += (dY - leadPoint.y) * (0.07 * evalSlowdown * targetSpeedScale);
+    // FIX 2: Apply dtMultiplier to the interpolation so the catch-up speed is consistent
+    leadPoint.x += (dX - leadPoint.x) * (0.07 * evalSlowdown * targetSpeedScale) * dtMultiplier;
+    leadPoint.y += (dY - leadPoint.y) * (0.07 * evalSlowdown * targetSpeedScale) * dtMultiplier;
 
     if (!threat.active && elapsed > 3000) {
         let dist = Math.hypot(ship.x - leadPoint.x, ship.y - leadPoint.y);
