@@ -1,7 +1,7 @@
 {
   "name": "STAR STREAM",
   "short_name": "STARSTREAM",
-  "description": "Virtual Stress Test v44.8 - Mobile Space Combat Game",
+  "description": "Virtual Stress Test v45.0 - Mobile Space Combat Game",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "landscape",
